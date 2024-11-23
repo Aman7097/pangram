@@ -26,20 +26,19 @@ router.put(
 
 router.delete("/:id", isManager, departmentController.delete);
 
-// Routes accessible by both managers and employees
 router.get("/", departmentController.list);
 
 router.get("/:id", departmentController.getById);
 
 router.post(
-  "/:id/employees",
+  "/:id/assign/employee",
   isManager,
   // validateRequest(updateEmployeeSchema),
   departmentController.assignEmployees
 );
 
 router.delete(
-  "/:id/employees/:employeeId",
+  "/:id/delete/:employeeId",
   isManager,
   departmentController.removeEmployee
 );

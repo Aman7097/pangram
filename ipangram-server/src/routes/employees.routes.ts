@@ -26,12 +26,6 @@ router.put(
 
 router.delete("/:id", isManager, employeeController.delete);
 
-// Routes for filtering employees (accessible by managers)
-router.get("/filter/location", isManager, employeeController.filterByLocation);
-
-router.get("/filter/name", isManager, employeeController.filterByName);
-
-// Routes accessible by both managers and employees
 router.get("/getAll", employeeController.list);
 
 router.get("/:id", employeeController.getById);

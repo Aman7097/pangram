@@ -20,8 +20,8 @@ export interface IUser {
 
 export interface IEmployee extends IUser {
   role: UserRole.EMPLOYEE;
-  department?: string; // Reference to Department
-  manager?: string; // Reference to Manager
+  department?: Types.ObjectId | string;
+  manager?: Types.ObjectId | string;
 }
 
 export interface IManager extends IUser {
