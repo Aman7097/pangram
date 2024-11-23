@@ -66,7 +66,7 @@ export const EditDepartmentModal: React.FC<EditDepartmentModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-ocean-50">
         <DialogHeader>
           <DialogTitle>Edit Department</DialogTitle>
         </DialogHeader>

@@ -1,20 +1,17 @@
 "use client";
-import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Filter, MapPin, Star, User } from "lucide-react";
-
-interface Employee {
-  id: string;
-  firstName: string;
-  lastName: string;
-  jobRole: string;
-  userType: string;
-  location: string;
-  rating: number;
-  availability: "Available" | "Unavailable";
-  imageUrl: string;
-}
+import { useEffect, useState } from "react";
+import Pagination from "@/components/dashboard/paginationBar";
+import EmployeeCard from "@/components/dashboard/employeeCard";
+import FilterDropdown from "@/components/dashboard/filter";
+import EmployeeDetailsModal from "@/components/dashboard/employeeDetailsModal";
+import { Employee } from "@/app/types/user";
+import toast from "react-hot-toast";
+import { deleteEmployee, updateEmployee } from "@/server-actions/employees";
+import AssignDepartmentModal from "@/components/dashboard/assignModal";
+import {
+  assignEmployeesToDepartment,
+  listDepartments,
+} from "@/server-actions/departments";
 
 interface EmployeeDashboardProps {
   isManager: boolean;
@@ -22,6 +19,7 @@ interface EmployeeDashboardProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  handleFilterChange: any;
   loading: boolean;
 }
 
@@ -31,139 +29,142 @@ const EmployeeDashboard = ({
   currentPage,
   totalPages,
   onPageChange,
+  handleFilterChange,
   loading,
 }: EmployeeDashboardProps) => {
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
+    null
+  );
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  const handleUpdateEmployee = async (employeeId: string, data: any) => {
+    try {
+      const response = await updateEmployee(employeeId, data);
+      toast.success("Employee updated successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update employee");
+    }
+  };
+
+  const handleDeleteEmployee = async (employeeId: string) => {
+    try {
+      await deleteEmployee(employeeId);
+      toast.success("Employee deleted successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete employee");
+    }
+  };
+
+  const onDetailsClick = async (employee: any) => {
+    // Call your API to delete the employee
+    setSelectedEmployee(employee);
+  };
+
+  const openAssignModal = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setIsAssignModalOpen(true);
+  };
+
+  const handleAssignTo = async (departmentId: string) => {
+    if (!selectedEmployee) return;
+
+    setIsAssigning(true);
+    try {
+      const response = await assignEmployeesToDepartment(departmentId, [
+        selectedEmployee._id,
+      ]);
+
+      if (response.success) {
+      } else {
+        console.error(response.error);
+      }
+    } catch (error) {
+      console.error("Failed to assign department:", error);
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const response = await listDepartments();
+        if (response.success) {
+          setDepartments(response.data);
+        } else {
+          console.error("Failed to fetch departments:", response.error);
+        }
+      } catch (error) {
+        console.error("Error fetching departments:", error);
+      } finally {
+      }
+    };
+
+    if (isAssignModalOpen) {
+      fetchDepartments();
+    }
+  }, [isAssignModalOpen]);
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header Section */}
-      <div className="bg-[#F8F9FA] p-4 w-full rounded-lg mb-8">
-        <div className=" w-full flex items-center justify-between">
-          <div className="w-full flex gap-4">
-            {isManager && (
-              <Button
-                variant="ghost"
-                className="bg-white w-full hover:bg-gray-50 text-gray-700 px-6 py-2 rounded-full shadow-sm"
-              >
-                Departments
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              className="bg-white w-full hover:bg-gray-50 text-gray-700 px-6 py-2 rounded-full shadow-sm"
-            >
-              All Employees
-            </Button>
-          </div>
-        </div>
-      </div>
-      <div className="flex items-end w-full justify-end py-4">
-        <Button
-          variant="ghost"
-          className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-full shadow-sm flex items-center gap-2"
-        >
-          <Filter className="w-4 h-4" />
-          Filter
-        </Button>
+    <div className="container mx-auto px-4">
+      <div className="flex items-end w-full justify-end">
+        <FilterDropdown onFilterChange={handleFilterChange} />
       </div>
 
-      {/* Employee Cards Grid */}
       {loading ? (
-        <div className="opacity-50">
-          {/* Your existing content - will be shown with opacity */}
-        </div>
+        <div className="opacity-50"></div>
       ) : (
         <div>
-          {/* Your existing content */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {employees.map((employee) => (
-              <Card
-                key={employee.id}
-                className="overflow-hidden hover:shadow-lg transition-shadow"
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start space-x-4">
-                    <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
-                      <User className="w-12 h-12 text-gray-500" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-lg">
-                          {employee.firstName} {employee.lastName}
-                        </h3>
-                        <div className="flex items-center">
-                          <Star className="w-4 h-4 text-yellow-400 mr-1" />
-                          <span>{employee.rating}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center text-gray-600 mt-1">
-                        <span className="mr-2">{employee.jobRole}</span>
-                      </div>
-
-                      <div className="flex items-center text-gray-600 mt-1">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        <span>{employee.location}</span>
-                      </div>
-
-                      <div className="flex items-center justify-between mt-3">
-                        <span
-                          className={`text-sm ${
-                            employee.availability === "Available"
-                              ? "text-green-500"
-                              : "text-gray-500"
-                          }`}
-                        >
-                          {employee.availability}
-                        </span>
-                        {isManager && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-blue-600 hover:text-blue-700"
-                          >
-                            Details
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <EmployeeCard
+                key={employee._id}
+                employee={employee}
+                isManager={isManager}
+                onDetailsClick={onDetailsClick}
+                handleAssignTo={handleAssignTo}
+                openAssignModal={openAssignModal}
+              />
             ))}
           </div>
 
           {/* Pagination */}
-          <div className="flex justify-center items-center mt-8 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </Button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <Button
-                key={page}
-                variant={currentPage === page ? "default" : "outline"}
-                size="sm"
-                onClick={() => onPageChange(page)}
-              >
-                {page}
-              </Button>
-            ))}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              Next
-            </Button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            maxVisiblePages={1}
+            className="mt-8"
+          />
         </div>
+      )}
+
+      {selectedEmployee && !isAssignModalOpen && (
+        <EmployeeDetailsModal
+          isOpen={!!selectedEmployee}
+          onClose={() => setSelectedEmployee(null)}
+          employee={selectedEmployee}
+          isManager={isManager}
+          onUpdate={handleUpdateEmployee}
+          onDelete={handleDeleteEmployee}
+        />
+      )}
+
+      {selectedEmployee && isAssignModalOpen && (
+        <AssignDepartmentModal
+          isOpen={isAssignModalOpen}
+          onClose={() => {
+            setIsAssignModalOpen(false);
+            setSelectedEmployee(null);
+          }}
+          employeeName={`${selectedEmployee.firstName} ${selectedEmployee.lastName}`}
+          currentDepartment={selectedEmployee.department || "NONE"}
+          departments={departments}
+          onAssign={handleAssignTo}
+          loading={isAssigning}
+        />
       )}
     </div>
   );

@@ -4,6 +4,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Eye, EyeOff } from "lucide-react";
+import toast from "react-hot-toast";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,85 +19,88 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { registerUser } from "@/server-actions/auth";
-import { toast } from "@/hooks/use-toast";
 
-interface SignupFormData {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  firstName: string;
-  lastName: string;
-  location: string;
-  jobRole: string;
-  userType: "employee" | "manager";
-}
+const signupSchema = z
+  .object({
+    email: z
+      .string()
+      .min(1, "Email is required")
+      .email("Invalid email address"),
+    password: z
+      .string()
+      .min(1, "Password is required")
+      .min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    location: z.string().min(1, "Location is required"),
+    jobRole: z.string().min(1, "Job role is required"),
+    userType: z.enum(["employee", "manager"]),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+type SignupFormValues = z.infer<typeof signupSchema>;
 
 export function SignupForm() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [formData, setFormData] = useState<SignupFormData>({
-    email: "",
-    password: "",
-    confirmPassword: "",
-    firstName: "",
-    lastName: "",
-    location: "",
-    jobRole: "",
-    userType: "employee",
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      confirmPassword: "",
+      firstName: "",
+      lastName: "",
+      location: "",
+      jobRole: "",
+      userType: "employee",
+    },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    // Basic validation
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters long");
-      return;
-    }
-
-    setLoading(true);
-
+  const onSubmit = async (data: SignupFormValues) => {
+    setIsLoading(true);
     try {
-      // Remove confirmPassword before sending to server
-      // const { confirmPassword, ...registerData } = formData;
-      const result = await registerUser(formData);
+      const result = await registerUser(data);
 
       if (result.success) {
-        toast({
-          title: "Success",
-          description: "Registration successful! Redirecting to login...",
-        });
+        toast.success("Registration successful! Redirecting to login...");
         router.push("/login?registered=true");
       } else {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: result.error,
-        });
+        toast.error(result.error || "Registration failed");
       }
     } catch (err: any) {
-      console.log(err);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred",
-      });
+      console.error(err);
+      toast.error("An unexpected error occurred");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <Card className="mx-auto max-w-lg">
+    <Card className="mx-auto w-full max-w-lg bg-ocean-50 text-azure-800">
       <CardHeader>
         <CardTitle className="text-2xl">Create an Account</CardTitle>
         <CardDescription>
@@ -99,137 +108,216 @@ export function SignupForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                id="firstName"
-                placeholder="John"
-                value={formData.firstName}
-                onChange={(e) =>
-                  setFormData({ ...formData, firstName: e.target.value })
-                }
-                required
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="John"
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-red-700" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Doe"
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-red-700" />
+                  </FormItem>
+                )}
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                placeholder="Doe"
-                value={formData.lastName}
-                onChange={(e) =>
-                  setFormData({ ...formData, lastName: e.target.value })
-                }
-                required
+
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="email"
+                      placeholder="john.doe@example.com"
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-red-700" />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="jobRole"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Job Role</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Software Engineer"
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-red-700" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="userType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>User Type</FormLabel>
+                    <Select
+                      disabled={isLoading}
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select user type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="employee">Employee</SelectItem>
+                        <SelectItem value="manager">Manager</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage className="text-red-700" />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="john.doe@example.com"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-              required
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="New York"
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-red-700" />
+                </FormItem>
+              )}
             />
-          </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          {...field}
+                          type={showPassword ? "text" : "password"}
+                          disabled={isLoading}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-red-700" />
+                  </FormItem>
+                )}
+              />
 
-          <div className="grid gap-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              placeholder="New York"
-              value={formData.location}
-              onChange={(e) =>
-                setFormData({ ...formData, location: e.target.value })
-              }
-              required
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="jobRole">Job Role</Label>
-            <Input
-              id="jobRole"
-              placeholder="Software Engineer"
-              value={formData.jobRole}
-              onChange={(e) =>
-                setFormData({ ...formData, jobRole: e.target.value })
-              }
-              required
-            />
-          </div>
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          {...field}
+                          type={showConfirmPassword ? "text" : "password"}
+                          disabled={isLoading}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-red-700" />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="userType">User Type</Label>
-            <select
-              id="userType"
-              value={formData.userType}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  userType: e.target.value as "employee" | "manager",
-                })
-              }
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              required
+            <Button
+              type="submit"
+              className="w-full bg-sky-900 text-ocean-100"
+              disabled={isLoading}
             >
-              <option value="employee">Employee</option>
-              <option value="manager">Manager</option>
-            </select>
-          </div>
+              {isLoading ? "Creating account..." : "Create account"}
+            </Button>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                required
-              />
+            <div className="mt-4 text-center text-sm">
+              Already have an account?{" "}
+              <Link href="/login" className="text-primary hover:underline">
+                Sign in
+              </Link>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={(e) =>
-                  setFormData({ ...formData, confirmPassword: e.target.value })
-                }
-                required
-              />
-            </div>
-          </div>
-
-          {error && (
-            <div className="text-sm text-red-500 text-center">{error}</div>
-          )}
-
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account..." : "Create account"}
-          </Button>
-
-          <div className="mt-4 text-center text-sm">
-            Already have an account?{" "}
-            <Link href="/login" className="text-primary underline">
-              Sign in
-            </Link>
-          </div>
-        </form>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );
 }
+
+export default SignupForm;

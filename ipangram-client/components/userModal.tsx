@@ -32,7 +32,7 @@ interface User {
 interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  userData: User;
+  userData: User | null;
 }
 
 const UserProfileModal = ({
@@ -40,10 +40,9 @@ const UserProfileModal = ({
   onClose,
   userData,
 }: UserProfileModalProps) => {
-  console.log(userData, "DVFVB");
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl bg-ocean-50 text-azure-900">
         <DialogHeader>
           <DialogTitle>Employee Profile</DialogTitle>
         </DialogHeader>

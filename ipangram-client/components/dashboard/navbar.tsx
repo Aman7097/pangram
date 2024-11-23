@@ -4,6 +4,7 @@ import { User, LogOut, ChevronDown, Building2 } from "lucide-react";
 import Link from "next/link";
 import UserProfileModal from "../userModal";
 import { useAuth } from "@/app/context/userContext";
+import { logoutUser } from "@/server-actions/auth";
 
 interface NavbarProps {
   userRole?: "manager" | "employee";
@@ -16,12 +17,16 @@ const TopNavbar = ({ userRole, userName, userEmail }: NavbarProps) => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const { user } = useAuth();
 
+  const handleUserLogout = async () => {
+    const response = await logoutUser();
+  };
+
   return (
-    <nav className="bg-white border-b border-gray-200 fixed w-full z-30 top-0 left-0">
+    <nav className="bg-white border-b border-gray-200 p-2 fixed w-full z-30 top-0 left-0 bg-[url('/hji.webp')] bg-cover bg-center bg-no-repeat ">
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo/Brand */}
-          <div className="flex items-center">
+          <div className="flex items-center md:mx-2">
             <Link href="/home" className="flex items-center">
               <Building2 className="h-8 w-8 text-blue-600 mr-2" />
               <span className="text-xl font-semibold text-gray-800">
@@ -30,35 +35,8 @@ const TopNavbar = ({ userRole, userName, userEmail }: NavbarProps) => {
             </Link>
           </div>
 
-          {/* Navigation Links - Based on Role */}
-          <div className="hidden md:flex items-center space-x-4">
-            {userRole === "manager" ? (
-              <>
-                <Link
-                  href="/departments"
-                  className="px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
-                >
-                  Departments
-                </Link>
-                <Link
-                  href="/employees"
-                  className="px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
-                >
-                  Employees
-                </Link>
-              </>
-            ) : (
-              <Link
-                href="/home"
-                className="px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
-              >
-                My Dashboard
-              </Link>
-            )}
-          </div>
-
           {/* Profile Dropdown */}
-          <div className="relative">
+          <div className="relative md:mx-2">
             <button
               type="button"
               className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none"
@@ -96,7 +74,7 @@ const TopNavbar = ({ userRole, userName, userEmail }: NavbarProps) => {
 
                 <button
                   onClick={() => {
-                    /* Add logout logic */
+                    handleUserLogout();
                   }}
                   className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                 >
@@ -138,8 +116,6 @@ const TopNavbar = ({ userRole, userName, userEmail }: NavbarProps) => {
           isOpen={isProfileModalOpen}
           onClose={() => setIsProfileModalOpen(false)}
           userData={user}
-          // userData={userData} // Pass the current user's data
-          // isManager={userRole === "manager"} // Pass the user's role
         />
       </div>
     </nav>

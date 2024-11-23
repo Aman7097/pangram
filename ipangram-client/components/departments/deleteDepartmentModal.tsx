@@ -28,7 +28,7 @@ export const DeleteDepartmentModal: React.FC<DeleteDepartmentModalProps> = ({
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-ocean-50">
         <DialogHeader>
           <DialogTitle>Delete Department</DialogTitle>
         </DialogHeader>

@@ -1,10 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, Users } from "lucide-react";
+import { AddDepartmentModal } from "@/components/departments/addDepartmentModal";
+import { EditDepartmentModal } from "@/components/departments/editDepartmentModal";
+import { DeleteDepartmentModal } from "@/components/departments/deleteDepartmentModal";
+import { usePathname } from "next/navigation";
+import DepartmentCard from "@/components/dashboard/departmentCard";
 
 interface Department {
-  id: string;
+  _id: string;
   name: string;
   description: string;
   employeeCount: number;
@@ -12,45 +17,100 @@ interface Department {
 
 interface DepartmentDashboardProps {
   departments: Department[];
-  onAdd: () => void;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
+  currentPage: number;
+  totalPages: number;
+  loading: boolean;
+  onPageChange: (page: number) => void;
+  onAddDepartment: (data: {
+    name: string;
+    description: string;
+  }) => Promise<void>;
+  onUpdateDepartment: (
+    _id: string,
+    data: { name: string; description: string }
+  ) => Promise<void>;
+  onDeleteDepartment: (_id: string) => Promise<void>;
 }
 
-const DepartmentDashboard = ({
+const DepartmentDashboard: React.FC<DepartmentDashboardProps> = ({
   departments,
-  onAdd,
-  onEdit,
-  onDelete,
-}: DepartmentDashboardProps) => {
-  return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header Section */}
-      <div className="bg-[#F8F9FA] p-4 w-full rounded-lg mb-8">
-        <div className=" w-full flex items-center justify-between">
-          <div className="w-full flex gap-4">
-            {/* {isManager && ( */}
-            <Button
-              variant="ghost"
-              className="bg-white w-full hover:bg-gray-50 text-gray-700 px-6 py-2 rounded-full shadow-sm"
-            >
-              Departments
-            </Button>
-            {/* )} */}
-            <Button
-              variant="ghost"
-              className="bg-white w-full hover:bg-gray-50 text-gray-700 px-6 py-2 rounded-full shadow-sm"
-            >
-              All Employees
-            </Button>
-          </div>
-        </div>
-      </div>
+  currentPage,
+  totalPages,
+  loading,
+  onPageChange,
+  onAddDepartment,
+  onUpdateDepartment,
+  onDeleteDepartment,
+}) => {
+  const pathname = usePathname();
 
+  const isActiveLink = (path: string) => {
+    return pathname === path ? "bg-gray-100" : "bg-white";
+  };
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] =
+    useState<Department | null>(null);
+  const [isModalLoading, setIsModalLoading] = useState(false);
+
+  const handleAdd = async (data: { name: string; description: string }) => {
+    setIsModalLoading(true);
+    try {
+      await onAddDepartment(data);
+      setIsAddModalOpen(false);
+    } catch (error) {
+      console.error("Error adding department:", error);
+    } finally {
+      setIsModalLoading(false);
+    }
+  };
+
+  const handleEdit = (department: Department) => {
+    setSelectedDepartment(department);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdate = async (data: { name: string; description: string }) => {
+    if (!selectedDepartment) return;
+    setIsModalLoading(true);
+    try {
+      console.log(selectedDepartment, "");
+      await onUpdateDepartment(selectedDepartment._id, data);
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error("Error updating department:", error);
+    } finally {
+      setIsModalLoading(false);
+    }
+  };
+
+  const handleDelete = (department: Department) => {
+    setSelectedDepartment(department);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedDepartment) return;
+    setIsModalLoading(true);
+    try {
+      await onDeleteDepartment(selectedDepartment._id);
+      setIsDeleteModalOpen(false);
+    } catch (error) {
+      console.error("Error deleting department:", error);
+    } finally {
+      setIsModalLoading(false);
+    }
+  };
+
+  return (
+    <div className="container mx-auto px-4">
       <div className="flex items-end w-full justify-end py-4">
         <Button
           variant="ghost"
-          className="bg-blue-400 hover:bg-gray-50 text-white px-4 py-2 rounded-full shadow-sm flex items-center gap-2"
+          className="bg-blue-500  text-white px-4 py-2 rounded-full shadow-sm flex items-center gap-2"
+          onClick={() => setIsAddModalOpen(true)}
         >
           <Plus className="w-4 h-4" />
           Add Department
@@ -58,55 +118,52 @@ const DepartmentDashboard = ({
       </div>
 
       {/* Department Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6`}>
         {departments.map((department) => (
-          <Card
-            key={department.id}
-            className="overflow-hidden hover:shadow-lg transition-shadow"
-          >
-            <CardContent className="p-6">
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-xl text-gray-800">
-                      {department.name}
-                    </h3>
-                    <p className="text-gray-600 mt-1">
-                      {department.description}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center text-gray-600">
-                  <Users className="w-5 h-5 mr-2" />
-                  <span>{department.employeeCount} Employees</span>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-blue-600 hover:text-blue-700 flex items-center gap-2"
-                    onClick={() => onEdit(department.id)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700 flex items-center gap-2"
-                    onClick={() => onDelete(department.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <DepartmentCard
+            key={department._id}
+            department={department}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
         ))}
       </div>
+
+      {/* Modals */}
+      <AddDepartmentModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={handleAdd}
+        isLoading={isModalLoading}
+      />
+
+      {selectedDepartment && (
+        <>
+          <EditDepartmentModal
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            department={{
+              _id: selectedDepartment._id,
+              name: selectedDepartment.name,
+              description: selectedDepartment.description,
+            }}
+            onSubmit={handleUpdate}
+            isLoading={isModalLoading}
+          />
+
+          <DeleteDepartmentModal
+            isOpen={isDeleteModalOpen}
+            onClose={() => setIsDeleteModalOpen(false)}
+            department={{
+              _id: selectedDepartment._id,
+              name: selectedDepartment.name,
+              description: selectedDepartment.description,
+            }}
+            onConfirm={handleConfirmDelete}
+            isLoading={isModalLoading}
+          />
+        </>
+      )}
     </div>
   );
 };

@@ -52,7 +52,7 @@ export const AddDepartmentModal: React.FC<AddDepartmentModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-ocean-50">
         <DialogHeader>
           <DialogTitle>Add Department</DialogTitle>
         </DialogHeader>
